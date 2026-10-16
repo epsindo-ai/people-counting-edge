@@ -1,0 +1,33 @@
+# Message settings, read by msgconv/libnvds_msgconv_peoplecount.so
+# Message format: README.md
+
+[store]
+id=mystore
+name=My Store
+
+[message]
+# Status message per camera at least this often (seconds), even if nothing happens.
+# Line crossings are always sent right away. 0 = only send on crossings.
+heartbeat-sec=1
+# Add the list of people in view (id, confidence_pct, bbox). 0 = counts only.
+include-objects=1
+# PeopleNet class ids: 0=person 1=bag 2=face
+person-class-id=0
+
+# One [sensorN] per camera.
+# N = position of the camera among ENABLED [sourceX] groups in app.txt (first = 0).
+# Line names must match analytics.txt (line-crossing-<name>). Several: Entry;Entry2
+# A [sensorN] without a camera is ignored.
+[sensor0]
+id=cam0
+description=Entrance
+place=FrontDoor
+entry-lines=Entry
+exit-lines=Exit
+
+[sensor1]
+id=cam1
+description=Second camera
+place=FrontDoor
+entry-lines=Entry
+exit-lines=Exit

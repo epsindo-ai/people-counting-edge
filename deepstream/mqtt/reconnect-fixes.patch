@@ -1,0 +1,52 @@
+Fixes for NVIDIA DeepStream 7.1 MQTT adapter:
+  sources/libs/mqtt_protocol_adaptor/nvds_mqtt_proto.cpp
+  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-License-Identifier: BSD-3-Clause
+
+1. send_async: no connect_cb on failed publish (deadlocks nvmsgbroker, pipeline freezes).
+2. connect: free the mosquitto client on failure (leaked one connection per retry).
+
+Applied by the Makefile. Test: broker outage keeps 1 connection and the pipeline runs.
+
+--- nvds_mqtt_proto.cpp
++++ nvds_mqtt_proto.cpp
+@@ -514,6 +514,7 @@
+         g_print("Error: Problem setting TLS options: %s.\n", mosquitto_strerror(rc));
+         nvds_log(NVDS_MQTT_LOG_CAT, LOG_ERR, "Error: Problem setting TLS options: %s.\n", mosquitto_strerror(rc));
+       }
++      mosquitto_destroy(mqttH->mosq);
+       delete mqttH;
+       return NULL;
+     }
+@@ -534,6 +535,7 @@
+     }
+     if (mqttH->connect_cb)
+       mqttH->connect_cb(mqttH, NVDS_MSGAPI_EVT_SERVICE_DOWN);
++    mosquitto_destroy(mqttH->mosq);
+     delete mqttH;
+     return NULL;
+   }
+@@ -568,6 +570,10 @@
+     }
+     if (mqttH->connect_cb)
+       mqttH->connect_cb(mqttH, NVDS_MSGAPI_EVT_SERVICE_DOWN);
++    // Stop the network thread started above and free the client, otherwise it
++    // keeps reconnecting in the background (one leaked connection per retry).
++    mosquitto_loop_stop(mqttH->mosq, true);
++    mosquitto_destroy(mqttH->mosq);
+     delete mqttH;
+     return NULL;
+   }
+@@ -623,9 +629,9 @@
+   if(rc != MOSQ_ERR_SUCCESS){
+     g_print("Error sending repeat publish: %s", mosquitto_strerror(rc));
+     nvds_log(NVDS_MQTT_LOG_CAT, LOG_ERR, "Error sending repeat publish: %s\n", mosquitto_strerror(rc));
+-    if (mqttH->connect_cb && rc == MOSQ_ERR_NO_CONN) {
+-      mqttH->connect_cb(mqttH, NVDS_MSGAPI_EVT_SERVICE_DOWN);
+-    }
++    // Do not call connect_cb here: nvmsgbroker holds its do_work lock while
++    // calling send_async, and its connect callback takes that lock again
++    // (deadlock, pipeline freezes). do_work() reports the lost connection.
+   }
+   // Map msg_info to message id
+   else

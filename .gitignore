@@ -218,3 +218,16 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+/app/ngc-cli/*
+
+# Build output (start.sh rebuilds these)
+*.so
+mqtt/build/
+
+# Model files (download.sh gets the model, the engine is rebuilt on first run)
+models/
+
+# Video output from [sink0] in app.txt
+config/out.mp4
+deepstream/config/out.mp4
+ngc-cli

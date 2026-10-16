@@ -1,0 +1,111 @@
+# People counting app (deepstream-test5-app).
+#
+# To add camera 1:
+#   1. [source1] enable=1 and set its uri
+#   2. [streammux] and [primary-gie] batch-size=2
+#      pgie_peoplenet.txt: model-engine-file ..._b1_... -> ..._b2_...
+#   3. analytics.txt: [line-crossing-stream-1] enable=1, draw its lines
+#   4. msgconv.txt: check [sensor1]
+
+[application]
+enable-perf-measurement=1
+perf-measurement-interval-sec=5
+
+[tiled-display]
+enable=1
+# grows by itself when there are more cameras
+rows=1
+columns=1
+width=1920
+height=1080
+
+# ---------- cameras ----------
+# Source order matters: the first ENABLED source is stream 0 (analytics stream-0, msgconv sensor0).
+
+[source0]
+enable=1
+type=3
+uri=rtsp://192.168.1.141:554/live
+num-sources=1
+gpu-id=0
+# reconnect if no frames for this many seconds
+rtsp-reconnect-interval-sec=10
+
+[source1]
+enable=0
+type=3
+uri=rtsp://CAMERA1_IP:554/live
+num-sources=1
+gpu-id=0
+rtsp-reconnect-interval-sec=10
+
+# ---------- processing ----------
+
+[streammux]
+gpu-id=0
+# = number of enabled cameras
+batch-size=1
+width=1920
+height=1080
+batched-push-timeout=40000
+
+[primary-gie]
+enable=1
+gpu-id=0
+# = number of enabled cameras (TensorRT engine is rebuilt once when this changes)
+batch-size=1
+config-file=/deepstream-mount/config/pgie_peoplenet.txt
+
+[tracker]
+enable=1
+tracker-width=640
+tracker-height=384
+gpu-id=0
+ll-lib-file=/opt/nvidia/deepstream/deepstream/lib/libnvds_nvmultiobjecttracker.so
+ll-config-file=/opt/nvidia/deepstream/deepstream/samples/configs/deepstream-app/config_tracker_IOU.yml
+
+[nvds-analytics]
+enable=1
+config-file=/deepstream-mount/config/analytics.txt
+
+[osd]
+enable=1
+gpu-id=0
+process-mode=0
+border-width=4
+text-size=15
+text-color=1;1;1;1
+show-clock=0
+
+# ---------- outputs ----------
+
+# Video file with boxes and lines, for checking line placement.
+[sink0]
+enable=0
+type=3
+container=1
+codec=1
+enc-type=1
+bitrate=4000000
+output-file=/deepstream-mount/config/out.mp4
+sync=0
+
+# MQTT messages. Only one sink of type=6 is supported, so all cameras share
+# one topic; sensor.id in the message tells them apart.
+[sink2]
+enable=1
+type=6
+# NVIDIA's MQTT adapter with a reconnect leak fix (mqtt/, built by start.sh)
+msg-broker-proto-lib=/deepstream-mount/mqtt/libnvds_mqtt_proto_fixed.so
+msg-broker-conn-str=mosquitto;1883
+topic=stores/mystore/events
+# 1 = if the broker drops, skip messages and reconnect (0 = app stops on the first failed send)
+new-api=1
+# Our message library (built by start.sh) and its settings
+msg-conv-msg2p-lib=/deepstream-mount/msgconv/libnvds_msgconv_peoplecount.so
+msg-conv-config=/deepstream-mount/config/msgconv.txt
+# Keep these 4 as is: the library needs to see every frame and decides itself when to send.
+msg-conv-msg2p-new-api=1
+msg-conv-payload-type=1
+msg-conv-frame-interval=1
+multiple-payloads=1
