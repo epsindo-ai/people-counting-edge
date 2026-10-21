@@ -5,4 +5,4 @@ set -e
 make -C /deepstream-mount/msgconv
 make -C /deepstream-mount/mqtt
 
-exec /opt/nvidia/deepstream/deepstream/bin/deepstream-test5-app -c /deepstream-mount/config/app.txt
+exec python3 /deepstream-mount/supervise.py

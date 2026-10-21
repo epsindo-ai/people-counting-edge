@@ -7,8 +7,10 @@ name=My Store
 
 [message]
 # Status message per camera at least this often (seconds), even if nothing happens.
-# Line crossings are always sent right away. 0 = only send on crossings.
-heartbeat-sec=1
+# Line crossings are always sent right away. 
+# 0 = only send on crossings.
+# Frequent metadata updates for the live overlay; crossings still send immediately.
+heartbeat-sec=0.035
 # Add the list of people in view (id, confidence_pct, bbox). 0 = counts only.
 include-objects=1
 # PeopleNet class ids: 0=person 1=bag 2=face
@@ -19,15 +21,15 @@ person-class-id=0
 # Line names must match analytics.txt (line-crossing-<name>). Several: Entry;Entry2
 # A [sensorN] without a camera is ignored.
 [sensor0]
-id=cam0
-description=Entrance
-place=FrontDoor
+id=cam1
+description=MALIOBORO_MUTIARA_LAMA
+place=PublicWalkway
 entry-lines=Entry
 exit-lines=Exit
 
 [sensor1]
-id=cam1
-description=Second camera
-place=FrontDoor
+id=cam2
+description=MALIOBORO_TERANG_BULAN
+place=PublicWalkway
 entry-lines=Entry
 exit-lines=Exit

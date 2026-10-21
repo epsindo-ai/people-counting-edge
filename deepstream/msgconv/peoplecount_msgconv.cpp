@@ -11,6 +11,7 @@
  */
 
 #include <cmath>
+#include <algorithm>
 #include <ctime>
 #include <string>
 #include <unordered_map>
@@ -233,23 +234,36 @@ build_payload (PeopleCountCtx * pc, NvDsFrameMeta * frame)
 
     if (!pc->include_objects)
       continue;
-    const NvOSD_RectParams &r = obj->rect_params;
+    /* rect_params is shared with the display branch: nvmultistreamtiler
+     * rewrites it into mosaic coordinates concurrently. Never export it.
+     * Component bbox metadata retains the original streammux coordinates. */
+    const NvBbox_Coords &tracked = obj->tracker_bbox_info.org_bbox_coords;
+    const NvBbox_Coords &detected = obj->detector_bbox_info.org_bbox_coords;
+    const NvBbox_Coords &r = (obj_id >= 0 && tracked.width > 0 && tracked.height > 0)
+        ? tracked : detected;
+    if (!std::isfinite(r.left) || !std::isfinite(r.top) ||
+        !std::isfinite(r.width) || !std::isfinite(r.height) ||
+        r.width <= 0 || r.height <= 0) continue;
+    const auto clip_x = [&](float x) { return std::lround(std::max(0.0f,
+        std::min(x * sx, (float) frame->source_frame_width))); };
+    const auto clip_y = [&](float y) { return std::lround(std::max(0.0f,
+        std::min(y * sy, (float) frame->source_frame_height))); };
     json_builder_begin_object (objects);
     json_builder_set_member_name (objects, "id");
     json_builder_add_int_value (objects, obj_id);
     /* whole percent: json-glib prints doubles as 0.98999999999999999 */
     json_builder_set_member_name (objects, "confidence_pct");
-    json_builder_add_int_value (objects, std::lround (obj->confidence * 100.0));
+    json_builder_add_int_value (objects, std::lround (std::max(0.0f, std::min(1.0f, obj->confidence >= 0 ? obj->confidence : obj->tracker_confidence)) * 100.0));
     json_builder_set_member_name (objects, "bbox");
     json_builder_begin_object (objects);
     json_builder_set_member_name (objects, "left");
-    json_builder_add_int_value (objects, std::lround (r.left * sx));
+    json_builder_add_int_value (objects, clip_x(r.left));
     json_builder_set_member_name (objects, "top");
-    json_builder_add_int_value (objects, std::lround (r.top * sy));
+    json_builder_add_int_value (objects, clip_y(r.top));
     json_builder_set_member_name (objects, "right");
-    json_builder_add_int_value (objects, std::lround ((r.left + r.width) * sx));
+    json_builder_add_int_value (objects, clip_x(r.left + r.width));
     json_builder_set_member_name (objects, "bottom");
-    json_builder_add_int_value (objects, std::lround ((r.top + r.height) * sy));
+    json_builder_add_int_value (objects, clip_y(r.top + r.height));
     json_builder_end_object (objects);
     json_builder_end_object (objects);
   }

@@ -10,28 +10,29 @@ config-height=1080
 osd-mode=2
 display-font-size=12
 
+# NOTE:
 # line-crossing-<name>=x1;y1;x2;y2;x3;y3;x4;y4
-#   x1;y1 -> x2;y2  direction arrow: a crossing counts only when moving this way
-#   x3;y3 -> x4;y4  the line people cross
+# x1;y1 -> x2;y2  direction arrow: a crossing counts only when moving this way
+# x3;y3 -> x4;y4  the line people cross
 # Entry and Exit share one line with opposite arrows.
 
-# Camera 0 (first enabled source). Line: x=950, y 150..450.
+# Camera 0: Malioboro Utara Lama, sidewalk line shifted 120px left.
 [line-crossing-stream-0]
 enable=1
 # 0 = person
 class-id=0
-# Entry: moving left
-line-crossing-Entry=1050;325;850;325;950;150;950;450
-# Exit: moving right
-line-crossing-Exit=850;325;1050;325;950;150;950;450
-mode=strict
+# Entry: toward foreground, down-left
+line-crossing-Entry=1335;660;1110;960;720;810;1545;810
+# Exit: toward background, up-right
+line-crossing-Exit=1110;960;1335;660;720;810;1545;810
+mode=balanced
 extended=0
 
-# Camera 1 (second enabled source). Placeholder line, set real values before enabling.
+# Camera 1: Malioboro Depan Dispar
 [line-crossing-stream-1]
-enable=0
+enable=1
 class-id=0
-line-crossing-Entry=1050;325;850;325;950;200;950;450
-line-crossing-Exit=850;325;1050;325;950;200;950;450
-mode=strict
+line-crossing-Entry=1455;660;1230;960;840;810;1665;810
+line-crossing-Exit=1230;960;1455;660;840;810;1665;810
+mode=balanced
 extended=0
